@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>Черные Цифровые Часы</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: black !important; /* Принудительно заставляем экран быть черным */
+            color: #00ff00;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Контейнер для часов */
+        .clock-container {
+            display: flex;
+            align-items: baseline;
+            font-weight: 900;
+            margin-bottom: 45px;
+        }
+
+        /* Часы и минуты */
+        .main-time {
+            font-size: 15vw;
+            line-height: 1;
+            -webkit-text-stroke: 2px #00ff00;
+        }
+
+        /* Разделительные две точки */
+        .dots {
+            font-size: 15vw;
+            line-height: 1;
+            margin: 0 5px;
+            animation: blink 1s infinite steps(1, start);
+        }
+
+        /* Секунды */
+        .seconds {
+            font-size: 7.5vw;
+            line-height: 1;
+            margin-left: 10px;
+            font-weight: 900;
+        }
+
+        /* Блок батареи */
+        .battery-section {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 30px;
+        }
+
+        .triangle-svg {
+            width: 45px;
+            height: 45px;
+        }
+
+        .triangle-path {
+            fill: none;
+            stroke: white;
+            stroke-width: 5;
+            stroke-linejoin: miter;
+            transition: fill 0.3s ease, stroke 0.3s ease;
+        }
+
+        /* Активный левый треугольник (Разрядка) - лилово-красный */
+        .discharging-active {
+            fill: #d32f2f !important;
+            stroke: #d32f2f !important;
+        }
+
+        /* Активный правый треугольник (Зарядка) - ядовито-зеленый */
+        .charging-active {
+            fill: #00ff00 !important;
+            stroke: #00ff00 !important;
+        }
+
+        /* Круговой индикатор */
+        .battery-container {
+            position: relative;
+            width: 125px;
+            height: 125px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .battery-svg {
+            transform: rotate(-90deg);
+            width: 125px;
+            height: 125px;
+        }
+
+        .circle-bg {
+            fill: none;
+            stroke: #002200;
+            stroke-width: 11;
+        }
+
+        .circle-progress {
+            fill: none;
+            stroke: #00ff00;
+            stroke-width: 11;
+            stroke-dasharray: 326;
+            stroke-dashoffset: 326;
+            transition: stroke-dashoffset 0.5s ease;
+        }
+
+        .battery-text {
+            position: absolute;
+            font-size: 22px;
+            font-weight: 900;
+            color: #00ff00;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Часы -->
+    <div class="clock-container">
+        <span class="main-time" id="hmTime">00:00</span>
+        <span class="dots">:</span>
+        <span class="seconds" id="secTime">00</span>
+    </div>
+
+    <!-- Индикация батареи -->
+    <div class="battery-section">
+        
+        <!-- Левый треугольник (Разряд) -->
+        <svg class="triangle-svg" viewBox="0 0 60 60">
+            <polygon id="triDown" class="triangle-path" points="5,15 55,15 30,50" />
+        </svg>
+
+        <!-- Круг -->
+        <div class="battery-container">
+            <svg class="battery-svg">
+                <circle class="circle-bg" cx="62.5" cy="62.5" r="52"></circle>
+                <circle class="circle-progress" id="batteryCircle" cx="62.5" cy="62.5" r="52"></circle>
+            </svg>
+            <div class="battery-text" id="batteryPercent">--%</div>
+        </div>
+
+        <!-- Правый треугольник (Заряд) -->
+        <svg class="triangle-svg" viewBox="0 0 60 60">
+            <polygon id="triUp" class="triangle-path" points="30,10 5,45 55,45" />
+        </svg>
+
+    </div>
+
+    <script>
+        const hmDisplay = document.getElementById('hmTime');
+        const secDisplay = document.getElementById('secTime');
+        const batteryCircle = document.getElementById('batteryCircle');
+        const batteryPercent = document.getElementById('batteryPercent');
+        
+        const triDown = document.getElementById('triDown');
+        const triUp = document.getElementById('triUp');
+
+        function updateClock() {
+            const now = new Date();
+            let hours = String(now.getHours()).padStart(2, '0');
+            let minutes = String(now.getMinutes()).padStart(2, '0');
+            let seconds = String(now.getSeconds()).padStart(2, '0');
+
+            if(hmDisplay) hmDisplay.textContent = hours + ':' + minutes;
+            if(secDisplay) secDisplay.textContent = seconds;
+        }
+
+        function updateBatteryStatus(charging, level) {
+            let pct = Math.round(level * 100);
+            if(batteryPercent) batteryPercent.textContent = pct + '%';
+
+            const radius = 52;
+            const circumference = 2 * Math.PI * radius;
+            const offset = circumference - (pct / 100) * circumference;
+            if(batteryCircle) batteryCircle.style.strokeDashoffset = offset;
+
+            if (charging) {
+                if(triUp) triUp.classList.add('charging-active');
+                if(triDown) triDown.classList.remove('discharging-active');
+            } else {
+                if(triDown) triDown.classList.add('discharging-active');
+                if(triUp) triUp.classList.remove('charging-active');
+            }
+        }
+
+        // Безопасное получение данных батареи
+        if (navigator.getBattery) {
+            navigator.getBattery().then(function(battery) {
+                updateBatteryStatus(battery.charging, battery.level);
+                
+                battery.addEventListener('levelchange', function() {
+                    updateBatteryStatus(battery.charging, battery.level);
+                });
+                battery.addEventListener('chargingchange', function() {
+                    updateBatteryStatus(battery.charging, battery.level);
+                });
+            }).catch(function() {
+                // Если заблокировано политикой безопасности
+                updateBatteryStatus(false, 0.5);
+            });
+        } else {
+            // Если браузер не поддерживает Battery API
+            updateBatteryStatus(false, 0.75);
+        }
+
+        setInterval(updateClock, 1000);
+        updateClock();
+    </script>
+</body>
+</html>
+
